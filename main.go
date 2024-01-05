@@ -15,7 +15,9 @@ func main() {
 	r := chi.NewRouter()
 
 	// Register the handler function to a specific route pattern using chi
-	r.Get("/categories/{id}", wc.Handle(GetCategory))
+	// customHandler := &wc.CustomHandler{}
+
+	r.Get("/categories/{id}", wc.Handle(GetCategory2))
 
 	// Start the HTTP server using chi's Router
 	fmt.Println("Server listening on port 8080...")
@@ -35,18 +37,38 @@ func main() {
 // 	return wc.ResponseEmpty{}, nil
 // }
 
+func GetCategory2[
+	Q wc.Query,
+	U wc.QueryPointer[Q],
+	R wc.Response,
+](
+	ctx context.Context,
+	q U,
+) (wc.ResponseEmpty, *wc.HandlerError) {
+	// queryData, ok := q.(*wc.QueryData)
+	// if !ok {
+	// 	return wc.ResponseEmpty{}, &wc.HandlerError{
+	// 		Code:    http.StatusBadRequest,
+	// 		Message: "Invalid query type",
+	// 	}
+	// }
+
+	// fmt.Println("getCategory", queryData)
+	return wc.ResponseEmpty{}, nil
+}
+
 func GetCategory(
 	ctx context.Context,
 	q *wc.QueryData,
 ) (wc.ResponseEmpty, *wc.HandlerError) {
-	// data, err := usecase.ListCategory(ctx)
-	// if err != nil {
-	// 	return nil, &wc.HandlerError{
-	// 		Code:    http.StatusInternalServerError,
-	// 		Message: err.Error(),
+	// queryData, ok := q.(*wc.QueryData)
+	// if !ok {
+	// 	return wc.ResponseEmpty{}, &wc.HandlerError{
+	// 		Code:    http.StatusBadRequest,
+	// 		Message: "Invalid query type",
 	// 	}
 	// }
 
-	// fmt.Println(q.IDSS)
+	// fmt.Println("getCategory", queryData)
 	return wc.ResponseEmpty{}, nil
 }
