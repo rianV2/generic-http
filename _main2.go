@@ -30,7 +30,7 @@ func (s *MyStore[T]) add(item T) {
 	s.values["aa"] = item
 }
 
-func main1() {
+func main2() {
 	var storeA = &MyStore[*A]{}
 	storeA.values = make(map[string]*A)
 	a := &A{}

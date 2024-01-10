@@ -2,31 +2,57 @@ package webcommon
 
 import (
 	"context"
-	"encoding/json"
-	"fmt"
 	"net/http"
 	"net/url"
-
-	"github.com/rs/zerolog/log"
 )
 
-// Expected to be used to wrap handler function to be translated into `http.HandlerFunc`
-func Handle[
-	Q Query,
-	U QueryPointer[Q],
-	R Response,
-](h StandardHandler[Q, U, R]) http.HandlerFunc {
-	return h.ServeHTTP
-}
+// Standard HTTP handler that we use, which should contain generic HTTP
+// handler processing that we expect from all APIs
+type StandardHandler[Q any, QP QueryPointer[Q]] func(
+	ctx context.Context,
+	query QP,
+) (Response, *HandlerError)
 
-type CustomHandler struct {
-	// You can add any fields or configurations specific to your handler here
-}
+// type MyStore[T Query] struct {
+// 	data T
+// }
 
-// Implementing the ServeHTTP method for CustomHandler
-func (ch *CustomHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	// Your logic for handling the HTTP request goes here
-	fmt.Fprintf(w, "Hello, this is a custom handler!")
+// func (s *MyStore[T]) Handle(item T) {
+// 	values := url.Values{}
+// 	// u := &url.URL{
+// 	// 	Scheme: "https",
+// 	// 	Host:   "example.com",
+// 	// 	Path:   "/path/to/endpoint",
+// 	// }
+// 	item.ParseQuery(values)
+// }
+
+// func Define() {
+// 	var storeA = &MyStore[*QueryData]{}
+// 	a := &QueryData{}
+
+// 	storeA.Handle(a)
+// }
+
+// type Q struct {
+// 	QueryData // Embedded QueryData type within Q
+// }
+
+func (h StandardHandler[Q, QP]) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	var query QP = new(Q)
+	// var query Q
+	// var q Q
+	// var query Q
+	// query := New[QueryData](QueryData{})
+	if err := query.ParseQuery(r.URL.Query()); err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		w.Write([]byte(err.Error()))
+		return
+	}
+
+	h(r.Context(), query)
+
+	w.WriteHeader(http.StatusOK)
 }
 
 type QueryPointer[QT any] interface {
@@ -34,48 +60,44 @@ type QueryPointer[QT any] interface {
 	Query
 }
 
-// Standard HTTP handler that we use, which should contain generic HTTP
-// handler processing that we expect from all APIs
-type StandardHandler[
-	Q Query,
-	U QueryPointer[Q],
-	R Response,
-] func(
-	ctx context.Context,
-	query U,
-) (R, *HandlerError)
+// Expected to be used to wrap handler function to be translated into `http.HandlerFunc`
+// func Handle(h StandardHandler) http.HandlerFunc {
+// 	return h.ServeHTTP
+// }
 
-// Serves HTTP request using specified generic parameter
-func (h StandardHandler[Q, U, R]) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	query := U(new(Q))
-	if err := query.ParseQuery(r.URL.Query()); err != nil {
-		w.WriteHeader(http.StatusBadRequest)
-		w.Write([]byte(err.Error()))
-		return
-	}
+// // Serves HTTP request using specified generic parameter
+// func (h StandardHandler[Q]) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+// 	// query := new(Q)
+// 	// var query Q
+// 	query := &QueryData{}
+// 	if err := query.ParseQuery(r.URL.Query()); err != nil {
+// 		w.WriteHeader(http.StatusBadRequest)
+// 		w.Write([]byte(err.Error()))
+// 		return
+// 	}
 
-	// var q Q
-	res, err := h(r.Context(), query)
-	if err != nil {
-		switch err.Code {
-		case http.StatusBadRequest:
-			w.WriteHeader(http.StatusBadRequest)
-		case http.StatusUnauthorized, http.StatusForbidden:
-			w.WriteHeader(http.StatusForbidden)
-		default:
-			w.WriteHeader(http.StatusInternalServerError)
-		}
-		if err := json.NewEncoder(w).Encode(err); err != nil {
-			log.Error().Stack().Err(err).Send()
-		}
-		return
-	}
+// 	// var q Q
+// 	res, err := h(r.Context(), query)
+// 	if err != nil {
+// 		switch err.Code {
+// 		case http.StatusBadRequest:
+// 			w.WriteHeader(http.StatusBadRequest)
+// 		case http.StatusUnauthorized, http.StatusForbidden:
+// 			w.WriteHeader(http.StatusForbidden)
+// 		default:
+// 			w.WriteHeader(http.StatusInternalServerError)
+// 		}
+// 		if err := json.NewEncoder(w).Encode(err); err != nil {
+// 			log.Error().Stack().Err(err).Send()
+// 		}
+// 		return
+// 	}
 
-	w.WriteHeader(http.StatusOK)
-	if err := json.NewEncoder(w).Encode(res); err != nil {
-		log.Error().Stack().Err(err).Send()
-	}
-}
+// 	w.WriteHeader(http.StatusOK)
+// 	if err := json.NewEncoder(w).Encode(res); err != nil {
+// 		log.Error().Stack().Err(err).Send()
+// 	}
+// }
 
 type QueryData struct {
 	IDSS string
@@ -86,6 +108,11 @@ type QueryData struct {
 func (q *QueryData) ParseQuery(values url.Values) error {
 	q.IDSS = "everything ok"
 	return nil
+}
+
+func New[T any](value T) *T {
+	ptr := &value
+	return ptr
 }
 
 // =====================================================
